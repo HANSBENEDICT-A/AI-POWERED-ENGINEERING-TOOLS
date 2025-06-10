@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt-Based Webpage Generator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #fff;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .sidebar {
+            flex: 1 1 300px;
+            padding: 15px;
+            background: #f9e6e6; /* Pastel pink */
+            border-radius: 8px;
+        }
+        .main {
+            flex: 3 1 600px;
+            padding: 15px;
+        }
+        h1, h2 {
+            color: #d81b60; /* Pastel pink highlight */
+        }
+        .error {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        .success {
+            color: #388e3c;
+            font-weight: bold;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        input[type="text"],
+        input[type="password"],
+        input[type="email"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        button {
+            background: #d81b60;
+            color: #fff;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #b0004c;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .submissions {
+            margin-top: 20px;
+        }
+        .submission-item {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        .download-links {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 10px;
+            }
+            .sidebar, .main {
+                flex: 1 1 100%;
+            }
+            iframe {
+                height: 400px;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            h2 {
+                font-size: 20px;
+            }
+            button, input, textarea {
+                font-size: 14px;
+            }
+        }
+        @media (max-width: 480px) {
+            .sidebar, .main {
+                padding: 10px;
+            }
+            iframe {
+                height: 300px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            h2 {
+                font-size: 18px;
+            }
+            pre {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>User Authentication</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <p class="{{ category }}">{{ message }}</p>
+                {% endfor %}
+            {% endwith %}
+            {% if not logged_in %}
+                <form method="POST" action="{{ url_for('auth') }}">
+                    <div>
+                        <label><input type="radio" name="auth_action" value="login" checked> Login</label>
+                        <label><input type="radio" name="auth_action" value="register"> Register</label>
+                    </div>
+                    <input type="text" name="username" placeholder="Username" required>
+                    <input type="password" name="password" placeholder="Password" required>
+                    {% if request.form.auth_action == 'register' %}
+                        <input type="email" name="email" placeholder="Email" required>
+                    {% endif %}
+                    <button type="submit">
+                        {{ 'Register' if request.form.auth_action == 'register' else 'Login' }}
+                    </button>
+                </form>
+            {% else %}
+                <p class="success">Logged in as {{ username }}</p>
+                <form method="POST" action="{{ url_for('auth') }}">
+                    <input type="hidden" name="auth_action" value="logout">
+                    <button type="submit">Logout</button>
+                </form>
+            {% endif %}
+        </div>
+        <div class="main">
+            <h1>Prompt-Based Webpage Generator and Editor</h1>
+
+            <!-- Generate Webpage -->
+            <h2>Generate Webpage</h2>
+            <form method="POST" action="{{ url_for('generate') }}">
+                <textarea name="initial_prompt" placeholder="Enter a prompt to generate a webpage" required>Create a webpage for a bakery named 'Sweet Delights' with:
+- Nav bar with Home, About, Menu, Contact, Login/Register
+- Hero banner with heading and tagline
+- Menu section with 3 items in grid
+- About section with short text
+- Contact form with JS POST to /api/contact
+- Footer with copyright
+- Inline CSS (white bg, pastel pink highlights)
+- JS for form submission and responsive nav
+- No external dependencies or images</textarea>
+                <button type="submit">Generate Webpage</button>
+            </form>
+            {% if generated_html %}
+                <h2>Generated HTML Code</h2>
+                <pre>{{ generated_html }}</pre>
+                <h2>Webpage Preview</h2>
+                <iframe srcdoc="{{ generated_html }}"></iframe>
+                <div class="download-links">
+                    <a href="{{ url_for('download', file_type='generated') }}">Download HTML</a>
+                </div>
+            {% endif %}
+
+            <!-- Edit Webpage -->
+            <h2>Edit Webpage</h2>
+            <form method="POST" action="{{ url_for('edit') }}">
+                <textarea name="edit_prompt" placeholder="Enter edit instructions" required></textarea>
+                <button type="submit">Edit Webpage</button>
+            </form>
+            {% if edited_html %}
+                <h2>Edited HTML Code</h2>
+                <pre>{{ edited_html }}</pre>
+                <h2>Edited Webpage Preview</h2>
+                <iframe srcdoc="{{ edited_html }}"></iframe>
+                <div class="download-links">
+                    <a href="{{ url_for('download', file_type='edited') }}">Download Edited HTML</a>
+                </div>
+            {% endif %}
+
+            <!-- Contact Form Submissions -->
+            <h2>Contact Form Submissions</h2>
+            <div class="submissions">
+                {% if submissions %}
+                    {% for sub in submissions %}
+                        <div class="submission-item">
+                            <p><strong>ID:</strong> {{ sub[0] }}</p>
+                            <p><strong>Name:</strong> {{ sub[1] }}</p>
+                            <p><strong>Email:</strong> {{ sub[2] }}</p>
+                            <p><strong>Message:</strong> {{ sub[3] }}</p>
+                            <p><strong>Submitted:</strong> {{ sub[4] }}</p>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No submissions yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
