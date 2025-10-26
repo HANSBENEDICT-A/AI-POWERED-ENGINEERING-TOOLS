@@ -130,7 +130,7 @@ def predict_disease(image_array):
         print(f"Error making prediction: {e}")
         return {
             'success': False,
-            'error': str(e)
+            'error': 'An error occurred during prediction. Please try again with a different image.'
         }
 
 @app.route('/')
@@ -170,7 +170,7 @@ def predict():
     
     except Exception as e:
         print(f"Error in predict route: {e}")
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': 'Failed to process image. Please ensure the image is valid.'})
 
 @app.route('/about')
 def about():
@@ -189,4 +189,7 @@ if __name__ == '__main__':
     print("Model ready!")
     
     # Run the Flask app
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Note: Set debug=False for production deployment
+    import os
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
